@@ -11,17 +11,21 @@ from langchain_core.runnables import RunnableConfig
 class Configuration:
     """LangGraph Configuration for the deep research agent."""
 
-    # Model settings
-    search_model: str = "gemini-2.5-flash"  # Web search supported model
-    synthesis_model: str = "gemini-2.5-flash"  # Citations supported model
-    video_model: str = "gemini-2.5-flash"  # Citations supported model
-    tts_model: str = "gemini-2.5-flash-preview-tts"
-    
+    # --- Local Model Configuration ---
+    # URL for your local LLM server (e.g., LM Studio)
+    local_llm_url: str = "http://localhost:1234/v1"
+    # Name of the local model to use for search, synthesis, and video analysis
+    local_model_name: str = "gemma-3n-e4b-it"
+
+    # --- Gemini Model Configuration ---
+    # Gemini model for Text-to-Speech
+    tts_model: str = "tts-1-hd" # More advanced TTS model
+
     # Temperature settings for different use cases
     search_temperature: float = 0.0           # Factual search queries
     synthesis_temperature: float = 0.3        # Balanced synthesis
     podcast_script_temperature: float = 0.4   # Creative dialogue
-    
+
     # TTS Configuration
     mike_voice: str = "Kore"
     sarah_voice: str = "Puck"
@@ -43,4 +47,3 @@ class Configuration:
             if f.init
         }
         return cls(**{k: v for k, v in values.items() if v})
-
