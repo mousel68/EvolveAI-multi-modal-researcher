@@ -20,8 +20,8 @@ This project is a simple research and podcast generation workflow that uses Lang
 
 1. **Clone and navigate to the project**:
 ```bash
-git clone https://github.com/langchain-ai/multi-modal-researcher
-cd mutli-modal-researcher
+git clone https://github.com/mousel68/EvolveAI-multi-modal-researcher
+cd EvolveAI-mutli-modal-researcher
 ```
 
 2. **Set up environment variables**:
