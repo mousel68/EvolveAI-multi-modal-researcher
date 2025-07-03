@@ -1,49 +1,142 @@
-"""Configuration settings for the research and podcast generation app"""
+"""LangGraph implementation of the research and podcast generation workflow"""
 
-import os
-from dataclasses import dataclass, fields
-from typing import Optional, Any
-from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
 from langchain_core.runnables import RunnableConfig
+from google.genai import types
+
+from agent.state import ResearchState, ResearchStateInput, ResearchStateOutput
+# Make sure to import get_local_llm from utils
+from agent.utils import create_podcast_discussion, create_research_report, get_local_llm
+from agent.configuration import Configuration
+from langsmith import traceable
+
+@traceable(run_type="llm", name="Web Research", project_name="multi-modal-researcher")
+def search_research_node(state: ResearchState, config: RunnableConfig) -> dict:
+    """Node that performs web search research on the topic"""
+    configuration = Configuration.from_runnable_config(config)
+    topic = state["topic"]
+
+    local_llm = get_local_llm(configuration)
+
+    search_prompt = f"Research this topic and give me an overview: {topic}"
+    search_response = local_llm.invoke(search_prompt)
+    search_text = search_response.content
+
+    # Note: Source tracking will be different with a local model.
+    return {
+        "search_text": search_text,
+        "search_sources_text": "Sources provided by local model." 
+    }
 
 
-@dataclass(kw_only=True)
-class Configuration:
-    """LangGraph Configuration for the deep research agent."""
+@traceable(run_type="llm", name="YouTube Video Analysis", project_name="multi-modal-researcher")
+def analyze_video_node(state: ResearchState, config: RunnableConfig) -> dict:
+    """Node that analyzes video content if video URL is provided"""
+    configuration = Configuration.from_runnable_config(config)
+    video_url = state.get("video_url")
+    topic = state["topic"]
 
-    # --- Local Model Configuration ---
-    # URL for your local LLM server (e.g., LM Studio)
-    local_llm_url: str = "http://localhost:1234/v1"
-    # Name of the local model to use for search, synthesis, and video analysis
-    local_model_name: str = "gemma-3n-e4b-it"
+    if not video_url:
+        return {"video_text": "No video provided for analysis."}
 
-    # --- Gemini Model Configuration ---
-    # Gemini model for Text-to-Speech
-    tts_model: str = "tts-1-hd" # More advanced TTS model
+    local_llm = get_local_llm(configuration)
 
-    # Temperature settings for different use cases
-    search_temperature: float = 0.0           # Factual search queries
-    synthesis_temperature: float = 0.3        # Balanced synthesis
-    podcast_script_temperature: float = 0.4   # Creative dialogue
+    # This part assumes your local model can handle video URLs or file paths.
+    video_analysis_prompt = f'Based on the video at {video_url}, give me an overview of this topic: {topic}'
 
-    # TTS Configuration
-    mike_voice: str = "Kore"
-    sarah_voice: str = "Puck"
-    tts_channels: int = 1
-    tts_rate: int = 24000
-    tts_sample_width: int = 2
+    video_response = local_llm.invoke(video_analysis_prompt)
+    video_text = video_response.content
 
-    @classmethod
-    def from_runnable_config(
-        cls, config: Optional[RunnableConfig] = None
-    ) -> "Configuration":
-        """Create a Configuration instance from a RunnableConfig."""
-        configurable = (
-            config["configurable"] if config and "configurable" in config else {}
-        )
-        values: dict[str, Any] = {
-            f.name: os.environ.get(f.name.upper(), configurable.get(f.name))
-            for f in fields(cls)
-            if f.init
+    return {"video_text": video_text}
+
+@traceable(run_type="llm", name="Create Report", project_name="multi-modal-researcher")
+def create_report_node(state: ResearchState, config: RunnableConfig) -> dict:
+    """Node that creates a comprehensive research report using the local model"""
+    configuration = Configuration.from_runnable_config(config)
+    topic = state["topic"]
+    search_text = state.get("search_text", "")
+    video_text = state.get("video_text", "")
+    search_sources_text = state.get("search_sources_text", "")
+    video_url = state.get("video_url", "")
+
+    # This now correctly calls the function that uses the local model
+    report, synthesis_text = create_research_report(
+        topic, search_text, video_text, search_sources_text, video_url, configuration
+    )
+
+    return {
+        "report": report,
+        "synthesis_text": synthesis_text
+    }
+
+
+@traceable(run_type="llm", name="Create Podcast", project_name="multi-modal-researcher")
+def create_podcast_node(state: ResearchState, config: RunnableConfig) -> dict:
+    """Node that creates a podcast discussion"""
+    configuration = Configuration.from_runnable_config(config)
+    topic = state["topic"]
+    search_text = state.get("search_text", "")
+    video_text = state.get("video_text", "")
+    search_sources_text = state.get("search_sources_text", "")
+    video_url = state.get("video_url", "")
+
+    # Create unique filename based on topic
+    safe_topic = "".join(c for c in topic if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    filename = f"research_podcast_{safe_topic.replace(' ', '_')}.wav"
+
+    # This function correctly uses the local model for the script and Gemini for TTS
+    podcast_script, podcast_filename = create_podcast_discussion(
+        topic, search_text, video_text, search_sources_text, video_url, filename, configuration
+    )
+
+    return {
+        "podcast_script": podcast_script,
+        "podcast_filename": podcast_filename
+    }
+
+
+def should_analyze_video(state: ResearchState) -> str:
+    """Conditional edge to determine if video analysis should be performed"""
+    if state.get("video_url"):
+        return "analyze_video"
+    else:
+        return "create_report"
+
+
+def create_research_graph() -> StateGraph:
+    """Create and return the research workflow graph"""
+
+    graph = StateGraph(
+        ResearchState, 
+        input=ResearchStateInput, 
+        output=ResearchStateOutput,
+        config_schema=Configuration
+    )
+
+    # Add nodes
+    graph.add_node("search_research", search_research_node)
+    graph.add_node("analyze_video", analyze_video_node)
+    graph.add_node("create_report", create_report_node)
+    graph.add_node("create_podcast", create_podcast_node)
+
+    # Add edges
+    graph.add_edge(START, "search_research")
+    graph.add_conditional_edges(
+        "search_research",
+        should_analyze_video,
+        {
+            "analyze_video": "analyze_video",
+            "create_report": "create_report"
         }
-        return cls(**{k: v for k, v in values.items() if v})
+    )
+    graph.add_edge("analyze_video", "create_report")
+    graph.add_edge("create_report", "create_podcast")
+    graph.add_edge("create_podcast", END)
+
+    return graph
+
+
+def create_compiled_graph():
+    """Create and compile the research graph"""
+    graph = create_research_graph()
+    return graph.compile()
