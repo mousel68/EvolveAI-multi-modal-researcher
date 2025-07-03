@@ -21,7 +21,7 @@ Accelerate your research with this multi-modal tool that automatically generates
 1. **Clone and navigate to the project**:
 ```bash
 git clone https://github.com/mousel68/EvolveAI-multi-modal-researcher
-cd EvolveAI-mutli-modal-researcher
+cd EvolveAI-multi-modal-researcher
 ```
 
 2. **Set up environment variables**:
