@@ -77,7 +77,8 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
     
     # Step 1: Generate podcast script
     script_prompt = f"""
-    Create a natural, engaging podcast conversation between Dr. Sarah (research expert) and Mike (curious interviewer) about "{topic}".
+    Create a natural, engaging podcast conversation between Tim and Monica, who are both educators, about "{topic}".
+    The audience for this podcast is other educators.
     
     Use this research content:
     
@@ -88,18 +89,18 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
     {video_text}
     
     Format as a dialogue with:
-    - Mike introducing the topic and asking questions
-    - Dr. Sarah explaining key concepts and insights
-    - Natural back-and-forth discussion (5-7 exchanges)
-    - Mike asking follow-up questions
-    - Dr. Sarah synthesizing the main takeaways
-    - Keep it conversational and accessible (3-4 minutes when spoken)
+    - Tim introducing the topic and asking questions from an educator's perspective.
+    - Monica explaining key concepts and insights, relating them to teaching and education.
+    - Natural back-and-forth discussion (5-7 exchanges).
+    - Tim asking follow-up questions that an educator might have.
+    - Monica synthesizing the main takeaways for a classroom setting.
+    - Keep it conversational and accessible for educators (3-4 minutes when spoken).
     
     Format exactly like this:
-    Mike: [opening question]
-    Dr. Sarah: [expert response]
-    Mike: [follow-up]
-    Dr. Sarah: [explanation]
+    Tim: [opening question]
+    Monica: [expert response for educators]
+    Tim: [follow-up]
+    Monica: [explanation with educational context]
     [continue...]
     """
     
@@ -112,7 +113,7 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
     podcast_script = script_response.candidates[0].content.parts[0].text
     
     # Step 2: Generate TTS audio
-    tts_prompt = f"TTS the following conversation between Mike and Dr. Sarah:\n{podcast_script}"
+    tts_prompt = f"TTS the following conversation between Tim and Monica:\n{podcast_script}"
     
     response = genai_client.models.generate_content(
         model=configuration.tts_model,
@@ -123,7 +124,7 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
                 multi_speaker_voice_config=types.MultiSpeakerVoiceConfig(
                     speaker_voice_configs=[
                         types.SpeakerVoiceConfig(
-                            speaker='Mike',
+                            speaker='Tim',
                             voice_config=types.VoiceConfig(
                                 prebuilt_voice_config=types.PrebuiltVoiceConfig(
                                     voice_name=configuration.mike_voice,
@@ -131,7 +132,7 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
                             )
                         ),
                         types.SpeakerVoiceConfig(
-                            speaker='Dr. Sarah',
+                            speaker='Monica',
                             voice_config=types.VoiceConfig(
                                 prebuilt_voice_config=types.PrebuiltVoiceConfig(
                                     voice_name=configuration.sarah_voice,
