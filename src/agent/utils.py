@@ -4,12 +4,21 @@ from google.genai import Client, types
 from rich.console import Console
 from rich.markdown import Markdown
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 
 load_dotenv()
 
-# Initialize client
+# Initialize Gemini client
 genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+
+def get_local_llm(configuration):
+    """Initializes and returns a local LLM client."""
+    return ChatOpenAI(
+        base_url=configuration.local_llm_url,
+        model=configuration.local_model_name,
+        temperature=configuration.synthesis_temperature,
+    )
 
 def display_gemini_response(response):
     """Extract text from Gemini response and display as markdown with references"""
@@ -74,8 +83,10 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
     if configuration is None:
         from agent.configuration import Configuration
         configuration = Configuration()
+
+    local_llm = get_local_llm(configuration)
     
-    # Step 1: Generate podcast script
+    # Step 1: Generate podcast script with local model
     script_prompt = f"""
     Create a natural, engaging podcast conversation between Tim and Monica, who are both educators, about "{topic}".
     The audience for this podcast is other educators.
@@ -104,15 +115,10 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
     [continue...]
     """
     
-    script_response = genai_client.models.generate_content(
-        model=configuration.synthesis_model,
-        contents=script_prompt,
-        config={"temperature": configuration.podcast_script_temperature}
-    )
+    script_response = local_llm.invoke(script_prompt)
+    podcast_script = script_response.content
     
-    podcast_script = script_response.candidates[0].content.parts[0].text
-    
-    # Step 2: Generate TTS audio
+    # Step 2: Generate TTS audio with Gemini
     tts_prompt = f"TTS the following conversation between Tim and Monica:\n{podcast_script}"
     
     response = genai_client.models.generate_content(
@@ -160,8 +166,10 @@ def create_research_report(topic, search_text, video_text, search_sources_text, 
     if configuration is None:
         from agent.configuration import Configuration
         configuration = Configuration()
+
+    local_llm = get_local_llm(configuration)
     
-    # Step 1: Create synthesis using Gemini
+    # Step 1: Create synthesis using local model
     synthesis_prompt = f"""
     You are a research analyst. I have gathered information about "{topic}" from two sources:
     
@@ -180,15 +188,8 @@ def create_research_report(topic, search_text, video_text, search_sources_text, 
     Focus on creating a coherent narrative that brings together the best insights from both sources.
     """
     
-    synthesis_response = genai_client.models.generate_content(
-        model=configuration.synthesis_model,
-        contents=synthesis_prompt,
-        config={
-            "temperature": configuration.synthesis_temperature,
-        }
-    )
-    
-    synthesis_text = synthesis_response.candidates[0].content.parts[0].text
+    synthesis_response = local_llm.invoke(synthesis_prompt)
+    synthesis_text = synthesis_response.content
     
     # Step 2: Create markdown report
     report = f"""# Research Report: {topic}
