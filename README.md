@@ -92,7 +92,7 @@ The workflow conditionally includes video analysis if a YouTube URL is provided,
 The system generates:
 
 - **Research Report**: Comprehensive markdown report with executive summary and sources
-- **Podcast Script**: Natural dialogue between Dr. Sarah (expert) and Mike (interviewer)  
+- **Podcast Script**: Natural dialogue between Tim and Monica, who are both educators.  
 - **Audio File**: Multi-speaker TTS audio file (`research_podcast_*.wav`)
 
 ## Configuration
@@ -139,7 +139,7 @@ The system supports runtime configuration through the `Configuration` class:
 ### Utility Functions
 
 - **display_gemini_response()**: Processes Gemini responses with grounding metadata
-- **create_podcast_discussion()**: Generates scripted dialogue and TTS audio
+- **create_podcast_discussion()**: Generates scripted dialogue and TTS audio for a podcast between Tim and Monica for an audience of educators.
 - **create_research_report()**: Synthesizes multi-modal research into reports
 - **wave_file()**: Saves audio data to WAV format
 
