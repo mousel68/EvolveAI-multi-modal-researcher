@@ -5,7 +5,7 @@ from langchain_core.runnables import RunnableConfig
 from google.genai import types
 
 from agent.state import ResearchState, ResearchStateInput, ResearchStateOutput
-from agent.utils import display_gemini_response, create_podcast_discussion, create_research_report, genai_client
+from agent.utils import display_gemini_response, create_podcast_discussion, create_research_report, get_local_llm
 from agent.configuration import Configuration
 from langsmith import traceable
 
@@ -15,20 +15,17 @@ def search_research_node(state: ResearchState, config: RunnableConfig) -> dict:
     configuration = Configuration.from_runnable_config(config)
     topic = state["topic"]
     
-    search_response = genai_client.models.generate_content(
-        model=configuration.search_model,
-        contents=f"Research this topic and give me an overview: {topic}",
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": configuration.search_temperature,
-        },
-    )
+    local_llm = get_local_llm(configuration)
+
+    search_prompt = f"Research this topic and give me an overview: {topic}"
+    search_response = local_llm.invoke(search_prompt)
+    search_text = search_response.content
     
-    search_text, search_sources_text = display_gemini_response(search_response)
-    
+    # Note: Source tracking will be different with a local model.
+    # This example assumes the local model provides the text directly.
     return {
         "search_text": search_text,
-        "search_sources_text": search_sources_text
+        "search_sources_text": "Sources provided by local model." 
     }
 
 
@@ -42,19 +39,14 @@ def analyze_video_node(state: ResearchState, config: RunnableConfig) -> dict:
     if not video_url:
         return {"video_text": "No video provided for analysis."}
     
-    video_response = genai_client.models.generate_content(
-        model=configuration.video_model,
-        contents=types.Content(
-            parts=[
-                types.Part(
-                    file_data=types.FileData(file_uri=video_url)
-                ),
-                types.Part(text=f'Based on the video content, give me an overview of this topic: {topic}')
-            ]
-        )
-    )
+    local_llm = get_local_llm(configuration)
     
-    video_text, _ = display_gemini_response(video_response)
+    # This part assumes your local model can handle video URLs or file paths.
+    # You might need to adjust this depending on how your local model ingests video.
+    video_analysis_prompt = f'Based on the video at {video_url}, give me an overview of this topic: {topic}'
+    
+    video_response = local_llm.invoke(video_analysis_prompt)
+    video_text = video_response.content
     
     return {"video_text": video_text}
 
