@@ -1,6 +1,6 @@
 # Multi-Modal Researcher
 
-This project is a simple research and podcast generation workflow that uses LangGraph with the unique capabilities of Google's Gemini 2.5 model family. It combines three useful features of the Gemini 2.5 model family. You can pass a research topic and, optionally, a YouTube video URL. The system will then perform research on the topic using search, analyze the video, combine the insights, and generate a report with citations as well as a short podcast on the topic for you. It takes advantage of a few of Gemini's native capabilities:
+Accelerate your research with this multi-modal tool that automatically generates reports and podcasts. Powered by LangGraph and Google's Gemini 2.5 model family, you can simply input a topic and an optional YouTube video link. The system then researches the subject, analyzes the video, and delivers a comprehensive report with citations and a ready-to-listen podcast, all by leveraging Gemini's native video, search, and audio generation features.
 
 - 🎥 [Video understanding and native YouTube tool](https://developers.googleblog.com/en/gemini-2-5-video-understanding/): Integrated processing of YouTube videos
 - 🔍 [Google search tool](https://developers.googleblog.com/en/gemini-2-5-thinking-model-updates/): Native Google Search tool integration with real-time web results
