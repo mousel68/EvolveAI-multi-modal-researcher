@@ -162,6 +162,10 @@ def create_podcast_discussion(topic, search_text, video_text, search_sources_tex
 def create_research_report(topic, search_text, video_text, search_sources_text, video_url, configuration=None):
     """Create a comprehensive research report by synthesizing search and video content"""
 
+         # --- ADD THIS LINE FOR DEBUGGING ---
+    print("\n\n>>> RUNNING THE CORRECT 'create_research_report' FUNCTION WITH LOCAL LLM <<<\n\n")
+
+        
     # Use default values if no configuration provided
     if configuration is None:
         from agent.configuration import Configuration
